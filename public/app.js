@@ -3,11 +3,13 @@ const $$ = (s) => document.querySelectorAll(s);
 
 // Application State
 const state = {
-  mainView: 'daily', // 'daily' | 'tasks' | 'notes' | 'chat' | 'feeds'
+  mainView: 'daily', // 'daily' | 'tasks' | 'notes' | 'chat' | 'feeds' | 'settings'
   feeds: { sources: [], articles: [], activeKey: 'all', unreadOnly: false, loading: false },
   notes: [],
   current: null, // Current note in Notes view
   folder: '',
+  folderTree: [],
+  expandedFolders: new Set(),
   view: 'all', // 'all' | 'recent' | 'drafts' | 'folder'
   query: '',
   listFilter: '',
@@ -22,7 +24,10 @@ const state = {
   chatLoading: false,
   availableLLMs: [],
   selectedModel: 'qwen3.5-2b',
-  selectedScope: ''
+  selectedScope: '',
+  taskSource: 'Inbox.md',
+  settings: null,
+  settingsLoading: false
 };
 
 // Storage Keys
@@ -30,6 +35,38 @@ const draftsKey = 'vaultdesk-drafts';
 const drafts = () => JSON.parse(localStorage.getItem(draftsKey) || '[]');
 const saveDrafts = (value) => localStorage.setItem(draftsKey, JSON.stringify(value));
 const draftFor = (path) => drafts().find((d) => d.path === path);
+function upsertDraft(note, content) {
+  const path = note.path || `临时草稿/${note.title || '未命名笔记'}.md`;
+  const title = note.title || note.date || path.split('/').pop().replace(/\.md$/i, '');
+  const next = {
+    ...note,
+    path,
+    title,
+    content,
+    draft: true,
+    generated: false,
+    exists: true,
+    mtime: Date.now()
+  };
+  saveDrafts([next, ...drafts().filter((d) => d.path !== path)]);
+  const draftCount = $('#draftCount');
+  if (draftCount) draftCount.textContent = drafts().length;
+  return next;
+}
+function bindDraftAutosave({ editor, note, statusEl, onSaved }) {
+  if (!editor) return;
+  let timer = null;
+  const save = () => {
+    const saved = upsertDraft(note, editor.value);
+    if (statusEl) statusEl.textContent = `已自动保存到临时草稿 · ${new Date(saved.mtime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    if (onSaved) onSaved(saved);
+  };
+  editor.addEventListener('input', () => {
+    if (statusEl) statusEl.textContent = '正在自动保存…';
+    clearTimeout(timer);
+    timer = setTimeout(save, 500);
+  });
+}
 
 // Utility functions
 const escapeHTML = (s = '') => String(s).replace(/[&<>"']/g, (c) => ({
@@ -184,9 +221,21 @@ async function writeNote(payload) {
   return data;
 }
 
+async function saveSettings(values, dailyTemplate) {
+  const r = await fetch('/api/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values, dailyTemplate })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error((data.errors || [data.error || '设置保存失败']).join('\n'));
+  return data;
+}
+
 async function refreshTasks() {
   const data = await api('/api/tasks');
   state.inboxTasks = data.tasks || [];
+  state.taskSource = data.source || state.taskSource;
   updateTaskBadges();
 }
 
@@ -260,7 +309,7 @@ function getTagClass(tag) {
   if (lower.includes('study') || lower.includes('学习') || lower.includes('learning')) return 'tag-learning';
   if (lower.includes('reading') || lower.includes('books') || lower.includes('阅读')) return 'tag-reading';
   if (lower.includes('ai') || lower.includes('agent') || lower.includes('llm') || lower.includes('mcp')) return 'tag-ai';
-  if (lower.includes('紧急') || lower.includes('整改') || lower.includes('报销')) return 'tag-urgent';
+  if (lower.includes('urgent') || lower.includes('紧急')) return 'tag-urgent';
   return '';
 }
 
@@ -342,11 +391,11 @@ function bindTaskEvents(container) {
       if (!item) return;
       const parts = taskParts(item);
       const previewText = parts.title || item.text || '此事项';
-      if (!confirm(`确定要从 Inbox.md 中删除此待办事项吗？\n\n"${previewText}"`)) return;
+      if (!confirm(`确定要从待办文件中删除此事项吗？\n\n"${previewText}"`)) return;
       try {
         await writeTask({ action: 'delete', line });
         await refreshTasks();
-        showToast('待办事项已从 Inbox.md 删除');
+        showToast('待办事项已删除');
         if (state.mainView === 'tasks') renderTasksView();
         if (state.mainView === 'daily') renderDaily(state.dailyNote);
       } catch (err) {
@@ -393,12 +442,12 @@ function initTaskModal() {
       const item = state.inboxTasks.find((t) => t.line === line);
       const parts = item ? taskParts(item) : { title: '' };
       const previewText = parts.title || item?.text || '此事项';
-      if (!confirm(`确定要从 Inbox.md 中删除此待办事项吗？\n\n"${previewText}"`)) return;
+      if (!confirm(`确定要从待办文件中删除此事项吗？\n\n"${previewText}"`)) return;
       try {
         await writeTask({ action: 'delete', line });
         await refreshTasks();
         closeModal();
-        showToast('待办事项已从 Inbox.md 删除');
+        showToast('待办事项已删除');
         if (state.mainView === 'tasks') renderTasksView();
         if (state.mainView === 'daily') renderDaily(state.dailyNote);
       } catch (err) {
@@ -466,7 +515,7 @@ function renderDaily(note) {
   // Status Badge
   let statusBadge = '';
   if (note.draft) {
-    statusBadge = '<span class="badge badge-draft">✎ 浏览器草稿</span>';
+    statusBadge = '<span class="badge badge-draft">✎ 临时草稿</span>';
   } else if (note.exists) {
     statusBadge = '<span class="badge badge-success">✓ 知识库已归档</span>';
   } else {
@@ -518,13 +567,14 @@ function renderDaily(note) {
       .replace(/^## 今日待办[\s\S]*?(?=^## 健康)/m, '')
       .replace(/^## 今日完成\s*\n```dataview[\s\S]*?```\s*/m, '')
       .replace(/```dataview[\s\S]*?```/g, '\n')
+      .replace(/^#\s+\d{4}-\d{2}-\d{2}[^\n]*\n?/, '')
       .replace(/\n---\s*\n\*模板版本:[\s\S]*$/, '');
 
     paperBody = `
       <div class="daily-paper">
         <div class="daily-paper-head">
           <div class="eyebrow" style="margin-bottom:4px">DAILY JOURNAL</div>
-          <h1 class="daily-paper-title">${escapeHTML(note.date)} 每日手记</h1>
+          <h1 class="daily-paper-title">每日手记</h1>
           <div class="daily-meta-info">
             <span>文件路径: ${escapeHTML(note.path)}</span>
             <span>字数: ${note.content ? note.content.length : 0} 字</span>
@@ -603,6 +653,7 @@ function editDailyNote(note) {
   container.outerHTML = `
     <div id="dailyEditorWrap" style="margin-top:14px">
       <textarea class="draft-editor" id="dailyDraftEditor">${escapeHTML(note.content)}</textarea>
+      <div class="autosave-status" id="dailyAutosaveStatus">输入后会自动保存到临时草稿</div>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
         <button class="btn btn-secondary" id="btnCancelEditDaily">取消</button>
         <button class="btn btn-primary" id="btnSaveEditDaily">💾 保存到知识库</button>
@@ -612,6 +663,13 @@ function editDailyNote(note) {
 
   const btnEdit = $('#btnEditDaily');
   if (btnEdit) btnEdit.style.display = 'none';
+
+  bindDraftAutosave({
+    editor: $('#dailyDraftEditor'),
+    note,
+    statusEl: $('#dailyAutosaveStatus'),
+    onSaved: (saved) => { state.dailyNote = saved; }
+  });
 
   $('#btnCancelEditDaily').onclick = () => renderDaily(note);
   $('#btnSaveEditDaily').onclick = async () => {
@@ -673,7 +731,7 @@ function renderTasksView() {
       <div class="task-add-main-row">
         <input type="text" id="taskMainInput" class="task-add-input" placeholder="＋ 添加新待办事项... (输入 #work 或点击下方标签快捷插入)">
         <input type="date" id="taskMainDueDate" class="task-add-date" value="${t}">
-        <button class="btn btn-primary task-add-submit" id="btnSubmitTask">＋ 写回 Inbox.md</button>
+        <button class="btn btn-primary task-add-submit" id="btnSubmitTask">＋ 写回待办文件</button>
       </div>
       <div class="task-add-sub-row">
         <div class="quick-tag-pills">
@@ -683,8 +741,6 @@ function renderTasksView() {
           <button class="quick-tag-btn" data-insert="#reading">+ #reading</button>
           <button class="quick-tag-btn" data-insert="#personal">+ #personal</button>
           <button class="quick-tag-btn" data-insert="#study">+ #study</button>
-          <button class="quick-tag-btn" data-insert="#整改">+ #整改</button>
-          <button class="quick-tag-btn" data-insert="#报销">+ #报销</button>
           <button class="quick-tag-btn" data-insert="🔼">+ 🔼 优先级</button>
         </div>
       </div>
@@ -807,7 +863,7 @@ function renderTasksView() {
           <div class="eyebrow">TASK & INBOX MANAGER</div>
           <h1>待办事项与任务流</h1>
         </div>
-        <div class="tasks-source-tag">数据源: 01_AREAS/Inbox.md</div>
+        <div class="tasks-source-tag">数据源: ${escapeHTML(state.taskSource)}</div>
       </div>
     </div>
     ${statsHtml}
@@ -829,7 +885,7 @@ function renderTasksView() {
       const result = await writeTask({ action: 'add', text, due });
       mainInput.value = '';
       await refreshTasks();
-      showToast('待办已写回 Inbox.md');
+      showToast('待办已写回');
       renderTasksView();
     } catch (e) {
       showToast(e.message);
@@ -889,7 +945,7 @@ function renderTasksView() {
 // ==========================================================================
 async function renderNotesView() {
   $('#crumbSection').textContent = '知识库笔记';
-  const title = state.view === 'recent' ? '最近更新' : (state.view === 'drafts' ? '浏览器草稿' : (state.folder || '全部笔记'));
+  const title = state.view === 'recent' ? '最近更新' : (state.view === 'drafts' ? '临时草稿' : (state.folder || '全部笔记'));
   $('#crumbTarget').textContent = state.current ? state.current.title : title;
 
   await renderNoteList();
@@ -909,10 +965,10 @@ async function renderNoteList() {
     state.notes = drafts().map((d) => ({ ...d, draft: true, mtime: d.mtime || Date.now() }));
   }
 
-  const title = state.view === 'recent' ? '最近更新' : (state.view === 'drafts' ? '浏览器草稿' : (state.folder || '全部笔记'));
+  const title = state.view === 'recent' ? '最近更新' : (state.view === 'drafts' ? '临时草稿' : (state.folder || '全部笔记'));
   $('#listTitle').textContent = title;
   $('#resultCount').textContent = state.notes.length + (data.total > 180 ? '+' : '');
-  $('#listSub').textContent = state.view === 'drafts' ? '草稿仅保存在当前浏览器，不会写回原始 vault' : '从原始 vault 直接读取，保持文件不变';
+  $('#listSub').textContent = state.view === 'drafts' ? '临时草稿只保存在当前浏览器，不会自动写回 vault' : '从原始 vault 直接读取，保持文件不变';
 
   const filterInp = $('#listFilterInput');
   const filterVal = (filterInp ? filterInp.value : '').toLowerCase().trim();
@@ -930,7 +986,7 @@ async function renderNoteList() {
       <div class="note-card-title">${escapeHTML(n.title)}</div>
       <div class="note-card-path">${escapeHTML(n.path)}</div>
       <div class="note-card-meta">
-        <span>${n.draft ? '本地草稿' : time(n.mtime)}</span>
+        <span>${n.draft ? '临时草稿' : time(n.mtime)}</span>
         ${n.tags?.slice(0, 2).map((t) => `<span class="task-tag">${escapeHTML(t)}</span>`).join('')}
       </div>
     </article>
@@ -980,9 +1036,9 @@ function renderNoteReader(note, content) {
     <div class="reader-head">
       <div class="reader-head-top">
         <div class="reader-title-area">
-          <div class="eyebrow">${isDraft ? 'BROWSER LOCAL DRAFT' : 'VAULT NOTE'}</div>
+          <div class="eyebrow">${isDraft ? 'TEMPORARY DRAFT' : 'VAULT NOTE'}</div>
           <h2>${escapeHTML(note.title)}</h2>
-          <div class="reader-path">${escapeHTML(note.path || '本地浏览器草稿')}</div>
+          <div class="reader-path">${escapeHTML(note.path || '本机临时草稿')}</div>
         </div>
         <div class="reader-actions">
           <button class="btn btn-secondary" id="btnEditNote">${isDraft ? '继续编辑' : '✏️ 浏览器内编辑'}</button>
@@ -1015,6 +1071,7 @@ function editVaultNote(note, content) {
   body.outerHTML = `
     <div id="noteEditorWrap">
       <textarea class="draft-editor" id="noteDraftEditor">${escapeHTML(content)}</textarea>
+      <div class="autosave-status" id="noteAutosaveStatus">输入后会自动保存到临时草稿</div>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
         <button class="btn btn-secondary" id="btnCancelEditNote">取消</button>
         <button class="btn btn-primary" id="btnSaveEditNote">💾 保存到知识库</button>
@@ -1024,6 +1081,13 @@ function editVaultNote(note, content) {
 
   const btnEdit = $('#btnEditNote');
   if (btnEdit) btnEdit.style.display = 'none';
+
+  bindDraftAutosave({
+    editor: $('#noteDraftEditor'),
+    note,
+    statusEl: $('#noteAutosaveStatus'),
+    onSaved: (saved) => { state.current = saved; }
+  });
 
   $('#btnCancelEditNote').onclick = () => renderNoteReader(note, content);
   $('#btnSaveEditNote').onclick = async () => {
@@ -1132,7 +1196,7 @@ function renderFeedsView() {
       const card = saveBtn.closest('.feed-article-card');
       try {
         await postApi('/api/feed/save', { title: card.dataset.title, link: card.dataset.link, source: card.dataset.source });
-        showToast('已存入稍后读 → 01_AREAS/reading/rss-inbox.md');
+        showToast('已存入稍后读');
       } catch (err) { showToast('保存失败'); }
       return;
     }
@@ -1153,6 +1217,357 @@ async function markArticleRead(key, id) {
   try { await postApi('/api/feed/read', { key, id }); await refreshFeeds(false); } catch (e) { /* 忽略 */ }
 }
 
+const settingsFields = [
+  { key: 'OBSIDIAN_VAULT_ROOT', label: 'Vault 根目录', placeholder: '/absolute/path/to/vault', hint: '必须是本机绝对路径。保存后重启服务才会重新索引。' },
+  { key: 'VAULT_INBOX_PATH', label: '待办文件', placeholder: 'Inbox.md', hint: 'Vault 内相对路径，第一次新增待办时会自动创建。' },
+  { key: 'VAULT_DAILY_PATH_PATTERN', label: '每日笔记路径', placeholder: 'Daily/{YYYY}-{MM}-{DD}.md', hint: '必须包含 {YYYY}、{MM}、{DD}。每日笔记内容只使用内置极简模板。' },
+  { key: 'VAULT_RSS_READ_LATER_PATH', label: 'RSS 稍后读文件', placeholder: 'read-later.md', hint: '保存 RSS 条目时写入的 Markdown 文件。' },
+  { key: 'VAULT_CHAT_SAVE_PATH_PATTERN', label: '问答保存路径', placeholder: 'answers/{YYYY}-{MM}-{DD}-answer-{slug}.md', hint: '必须包含 {slug}，可使用 {YYYY}、{MM}、{DD}、{date}。' },
+  { key: 'KB_SEARCH_SCRIPT', label: '知识库检索脚本', placeholder: '/absolute/path/to/kb-search.py', hint: '可留空；留空时使用默认位置。' },
+  { key: 'LMSTUDIO_BASE_URL', label: 'LM Studio 地址', placeholder: 'http://127.0.0.1:1234/v1', hint: 'OpenAI 兼容接口地址。' },
+  { key: 'HOST', label: '监听地址', placeholder: '127.0.0.1', hint: '建议保持 127.0.0.1；仅可信局域网使用 0.0.0.0。' },
+  { key: 'PORT', label: '端口', placeholder: '4177', hint: '1-65535。' }
+];
+
+async function renderSettingsView() {
+  const container = $('#settingsContainer');
+  if (!container) return;
+  $('#crumbSection').textContent = '设置';
+  $('#crumbTarget').textContent = 'VaultDesk 配置';
+  if (!state.settings || state.settingsLoading) {
+    container.innerHTML = '<div class="settings-loading">正在读取配置…</div>';
+    try {
+      state.settingsLoading = true;
+      state.settings = await api('/api/settings');
+    } catch (err) {
+      container.innerHTML = `<div class="settings-loading">配置读取失败：${escapeHTML(err.message)}</div>`;
+      return;
+    } finally {
+      state.settingsLoading = false;
+    }
+  }
+
+  const cfg = state.settings || {};
+  const values = cfg.values || {};
+  const effective = cfg.effective || {};
+  const defaults = cfg.defaults || {};
+  const dailyTemplate = cfg.dailyTemplate || {};
+  const notice = cfg.requiresRestart ? '<div class="settings-notice is-warning">配置已保存，重启 VaultDesk 后生效。</div>' : '';
+  container.innerHTML = `
+    <section class="settings-panel">
+      <div class="settings-head">
+        <div>
+          <div class="eyebrow">APP SETTINGS</div>
+          <h1>设置</h1>
+        </div>
+        <button class="btn btn-secondary" id="btnReloadSettings">重新读取</button>
+      </div>
+      <div class="settings-current">
+        <div><span>当前 vault</span><strong>${escapeHTML(effective.OBSIDIAN_VAULT_ROOT || '')}</strong></div>
+        <div><span>配置文件</span><strong>${escapeHTML(cfg.envPath || '')}</strong></div>
+      </div>
+      ${notice}
+      <form id="settingsForm" class="settings-form">
+        ${settingsFields.map((field) => `
+          <label class="settings-field">
+            <span>${escapeHTML(field.label)}</span>
+            <input name="${escapeHTML(field.key)}" value="${escapeHTML(values[field.key] || '')}" placeholder="${escapeHTML(defaults[field.key] || field.placeholder)}" autocomplete="off">
+            <small>${escapeHTML(field.hint)}</small>
+          </label>
+        `).join('')}
+        <label class="settings-field settings-template-field">
+          <span>每日笔记模板</span>
+          <textarea name="dailyTemplate" id="dailyTemplateInput" class="settings-template-editor" rows="10">${escapeHTML(dailyTemplate.content || '')}</textarea>
+          <small>VaultDesk 专用模板，保存到应用自己的 data/daily-template.md。支持 {{date}}、{{YYYY}}、{{MM}}、{{DD}}，不会读取 Obsidian 模板文件。</small>
+        </label>
+        <div class="settings-error" id="settingsError" hidden></div>
+        <div class="settings-actions">
+          <button type="button" class="btn btn-secondary" id="btnUseDefaults">填入默认值</button>
+          <button type="button" class="btn btn-secondary" id="btnResetDailyTemplate">恢复默认模板</button>
+          <button type="submit" class="btn btn-primary">保存设置</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="settings-panel" id="vectorPanel">
+      <div class="settings-head">
+        <div>
+          <div class="eyebrow">SEMANTIC SEARCH</div>
+          <h1>向量化语义搜索</h1>
+        </div>
+      </div>
+      <div class="settings-current" id="vectorSummary">
+        <div><span>索引状态</span><strong id="vecSummaryText">正在读取…</strong></div>
+      </div>
+      <div class="vector-form">
+        <label class="settings-field">
+          <span>向量化的目录（vault 内相对路径，留空 = 整个 vault）</span>
+          <input id="vecRoot" list="vecRootOptions" placeholder="例如 notes、Daily、01_AREAS" autocomplete="off">
+          <datalist id="vecRootOptions"></datalist>
+          <small>建立索引后，目录内 .md/.txt 的新增与修改会被监控并自动增量更新。</small>
+        </label>
+        <label class="settings-field">
+          <span>嵌入服务</span>
+          <select id="vecProvider" class="chat-select">
+            <option value="ollama">Ollama（本机 11434）</option>
+            <option value="lmstudio">LM Studio（OpenAI 兼容接口）</option>
+          </select>
+          <small>对目录分块后调用本机嵌入模型生成向量，全部数据保存在应用 data/ 目录。</small>
+        </label>
+        <label class="settings-field">
+          <span>嵌入模型</span>
+          <select id="vecModel" class="chat-select"><option value="">正在读取嵌入模型…</option></select>
+          <small>需要已在嵌入服务中准备 embedding 模型，例如 qwen3-embedding、bge-m3、nomic-embed-text。</small>
+        </label>
+      </div>
+      <div class="vector-progress-wrap" id="vecProgressWrap" hidden>
+        <div class="vector-progress-bar"><div class="vector-progress-fill" id="vecProgressFill"></div></div>
+        <div class="vector-progress-text" id="vecStatusText"></div>
+      </div>
+      <div class="settings-error" id="vecError" hidden></div>
+      <div class="settings-actions">
+        <button type="button" class="btn btn-primary" id="btnVecStart">开始向量化</button>
+        <button type="button" class="btn btn-secondary" id="btnVecStop" hidden>停止</button>
+        <button type="button" class="btn btn-secondary" id="btnVecClear">清空索引</button>
+      </div>
+    </section>
+  `;
+
+  $('#btnReloadSettings').onclick = async () => {
+    state.settings = null;
+    await renderSettingsView();
+  };
+  $('#btnUseDefaults').onclick = () => {
+    settingsFields.forEach((field) => {
+      const input = $(`#settingsForm [name="${field.key}"]`);
+      if (input) input.value = defaults[field.key] || '';
+    });
+  };
+  $('#btnResetDailyTemplate').onclick = () => {
+    const input = $('#dailyTemplateInput');
+    if (input) input.value = dailyTemplate.defaultContent || '# {{date}}\n\n## Notes\n\n## Tasks\n';
+  };
+  $('#settingsForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const valuesToSave = Object.fromEntries(settingsFields.map(field => [field.key, String(form.get(field.key) || '').trim()]));
+    const templateToSave = String(form.get('dailyTemplate') || '');
+    const errorBox = $('#settingsError');
+    errorBox.hidden = true;
+    try {
+      state.settings = await saveSettings(valuesToSave, templateToSave);
+      showToast('设置已保存，模板会立即用于新日记');
+      renderSettingsView();
+    } catch (err) {
+      errorBox.textContent = err.message;
+      errorBox.hidden = false;
+    }
+  };
+  initVectorPanel();
+}
+
+// ===================== 🧠 向量化语义搜索面板 =====================
+const VECTOR_ACTIVE_PHASES = ['starting', 'scanning', 'embedding', 'saving', 'incremental'];
+let vecPanelToken = 0;
+let vecPollAbort = false;
+
+function collectFolderPaths(nodes, out = []) {
+  for (const node of nodes || []) {
+    if (node.path) out.push(node.path);
+    if (node.children?.length) collectFolderPaths(node.children, out);
+  }
+  return out;
+}
+
+function vecPhaseLabel(phase) {
+  const map = {
+    starting: '正在启动',
+    scanning: '正在扫描目录',
+    embedding: '正在生成向量',
+    saving: '正在保存索引',
+    incremental: '增量更新中',
+    done: '已完成',
+    stopped: '已停止',
+    error: '出错',
+    idle: '空闲'
+  };
+  return map[phase] || phase || '空闲';
+}
+
+async function refreshVectorStatusOnce() {
+  try { return await api('/api/vector/status'); } catch { return null; }
+}
+
+function renderVectorStatus(payload) {
+  const summary = $('#vecSummaryText');
+  if (!summary) return null; // 面板已被重新渲染
+  const wrap = $('#vecProgressWrap');
+  const fill = $('#vecProgressFill');
+  const statusText = $('#vecStatusText');
+  const errBox = $('#vecError');
+  const btnStart = $('#btnVecStart');
+  const btnStop = $('#btnVecStop');
+
+  if (!payload) {
+    summary.textContent = '状态读取失败';
+    return payload;
+  }
+  const s = payload.status || {};
+  const active = VECTOR_ACTIVE_PHASES.includes(s.phase);
+  if (payload.config && payload.chunks > 0) {
+    summary.textContent = `已索引 ${payload.files} 个文件 · ${payload.chunks} 块 · 模型 ${payload.config.provider}/${payload.config.model}${payload.watching ? ' · 目录监控中' : ''}`;
+  } else if (active) {
+    summary.textContent = `索引进行中：${vecPhaseLabel(s.phase)}`;
+  } else {
+    summary.textContent = '未建立索引 —— 选择目录与嵌入模型后开始';
+  }
+  wrap.hidden = !active && !(s.phase === 'done' && s.filesTotal > 0);
+  if (fill) {
+    const pct = s.filesTotal > 0 ? Math.min(100, Math.round((s.filesDone / s.filesTotal) * 100)) : (active ? 5 : 100);
+    fill.style.width = `${pct}%`;
+  }
+  if (statusText) {
+    statusText.textContent = active
+      ? `${vecPhaseLabel(s.phase)} · 文件 ${s.filesDone}/${s.filesTotal} · 本轮生成 ${s.chunksDone} 块${s.currentFile ? ` · 当前: ${s.currentFile}` : ''}`
+      : (s.error ? '' : (s.phase === 'done' ? `完成：共 ${payload.files} 个文件 / ${payload.chunks} 块` : ''));
+  }
+  if (errBox) {
+    errBox.hidden = !s.error;
+    errBox.textContent = s.error || '';
+  }
+  btnStart.disabled = active;
+  btnStart.textContent = active ? '向量化运行中…' : (payload.chunks > 0 ? '重建索引' : '开始向量化');
+  btnStop.hidden = !active;
+  return payload;
+}
+
+async function pollVectorLoop(token) {
+  while (!vecPollAbort && token === vecPanelToken && $('#vecStatusText')) {
+    const payload = await refreshVectorStatusOnce();
+    const rendered = renderVectorStatus(payload);
+    const phase = rendered?.status?.phase;
+    if (!phase || !VECTOR_ACTIVE_PHASES.includes(phase)) break;
+    await new Promise((r) => setTimeout(r, 1200));
+  }
+  // 结束后再刷新一次终态
+  if (token === vecPanelToken && $('#vecStatusText')) {
+    renderVectorStatus(await refreshVectorStatusOnce());
+    updateChatVectorBadge();
+  }
+}
+
+async function loadVectorModels(provider, preferred) {
+  const sel = $('#vecModel');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">正在读取嵌入模型…</option>';
+  try {
+    const data = await api('/api/vector/models');
+    const models = (data.models || []).filter(m => m.provider === provider);
+    if (!models.length) {
+      const hint = provider === 'ollama'
+        ? '未检测到嵌入模型（Ollama 中执行 ollama pull qwen3-embedding 或 bge-m3）'
+        : '未检测到嵌入模型（请在 LM Studio 加载 embedding 模型）';
+      sel.innerHTML = `<option value="">${escapeHTML(hint)}</option>`;
+      return;
+    }
+    sel.innerHTML = models.map(m => `<option value="${escapeHTML(m.id)}">${escapeHTML(m.name)}</option>`).join('');
+    if (preferred && models.some(m => m.id === preferred)) sel.value = preferred;
+  } catch (err) {
+    sel.innerHTML = `<option value="">模型列表读取失败：${escapeHTML(err.message)}</option>`;
+  }
+}
+
+function initVectorPanel() {
+  const token = ++vecPanelToken;
+  vecPollAbort = false;
+
+  // 目录联想列表
+  const datalist = $('#vecRootOptions');
+  if (datalist) {
+    datalist.innerHTML = ['<option value=""></option>']
+      .concat(collectFolderPaths(state.folderTree).map(p => `<option value="${escapeHTML(p)}"></option>`))
+      .join('');
+  }
+
+  const providerSel = $('#vecProvider');
+  if (providerSel) {
+    providerSel.onchange = () => loadVectorModels(providerSel.value, '');
+  }
+
+  $('#btnVecStart').onclick = async () => {
+    const errBox = $('#vecError');
+    errBox.hidden = true;
+    const root = ($('#vecRoot')?.value || '').trim().replace(/^\/+|\/+$/g, '');
+    const model = ($('#vecModel')?.value || '').trim();
+    if (!model) { errBox.textContent = '请先选择一个可用的嵌入模型'; errBox.hidden = false; return; }
+    try {
+      const r = await postApi('/api/vector/index', { root, provider: providerSel.value, model });
+      if (r.ok === false) throw new Error(r.error || '启动失败');
+      showToast('向量化任务已启动，完成后知识问答将自动启用语义检索');
+      pollVectorLoop(token);
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.hidden = false;
+    }
+  };
+
+  $('#btnVecStop').onclick = async () => {
+    try { await postApi('/api/vector/stop', {}); showToast('已发送停止指令'); } catch {}
+  };
+
+  $('#btnVecClear').onclick = async () => {
+    if (!confirm('确定清空向量索引？语义检索将退回关键词模式。')) return;
+    try {
+      const r = await postApi('/api/vector/clear', {});
+      if (r.ok === false) throw new Error(r.error || '清空失败');
+      showToast('向量索引已清空');
+      renderVectorStatus(await refreshVectorStatusOnce());
+      updateChatVectorBadge();
+    } catch (err) {
+      const errBox = $('#vecError');
+      errBox.textContent = err.message;
+      errBox.hidden = false;
+    }
+  };
+
+  refreshVectorStatusOnce().then(payload => {
+    if (token !== vecPanelToken || !$('#vecStatusText')) return;
+    renderVectorStatus(payload);
+    if (payload?.config?.provider) {
+      providerSel.value = payload.config.provider;
+      loadVectorModels(payload.config.provider, payload.config.model);
+    } else if (providerSel) {
+      loadVectorModels(providerSel.value, '');
+    }
+    const phase = payload?.status?.phase;
+    if (phase && VECTOR_ACTIVE_PHASES.includes(phase)) pollVectorLoop(token);
+  });
+}
+async function updateChatVectorBadge() {
+  const host = document.querySelector('.chat-header-left');
+  if (!host) return;
+  let badge = $('#chatVectorBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'chatVectorBadge';
+    badge.className = 'chat-vector-badge';
+    host.appendChild(badge);
+  }
+  try {
+    const s = await api('/api/vector/status');
+    if (!s.config || !s.chunks) {
+      badge.textContent = '🧠 语义检索未启用（可在设置中向量化目录）';
+      badge.classList.add('is-off');
+    } else {
+      badge.textContent = `🧠 语义检索 · ${s.files} 文件 / ${s.chunks} 块 · ${s.config.model}${s.watching ? ' · 监控中' : ''}`;
+      badge.classList.remove('is-off');
+    }
+  } catch {
+    badge.textContent = '🧠 语义检索不可用';
+    badge.classList.add('is-off');
+  }
+}
+
 function switchMainView(targetView) {
   state.mainView = targetView;
   // 移动端/竖屏：切换视图后自动收起侧栏抽屉
@@ -1171,6 +1586,8 @@ function switchMainView(targetView) {
   if (paneChat) paneChat.classList.toggle('active', targetView === 'chat');
   const paneFeeds = $('#paneFeeds');
   if (paneFeeds) paneFeeds.classList.toggle('active', targetView === 'feeds');
+  const paneSettings = $('#paneSettings');
+  if (paneSettings) paneSettings.classList.toggle('active', targetView === 'settings');
 
   // Sync Sidebar Active Nav
   $$('.nav-item').forEach((nav) => nav.classList.remove('active'));
@@ -1185,15 +1602,20 @@ function switchMainView(targetView) {
     else if (state.view === 'drafts') $('#navDrafts').classList.add('active');
     else $('#navAll').classList.add('active');
     renderNotesView();
+    renderFolderTree();
   } else if (targetView === 'chat') {
     $('#navChat')?.classList.add('active');
     $('#crumbSection').textContent = '知识问答';
     $('#crumbTarget').textContent = 'RAG 智能对话';
     renderChatView();
+    updateChatVectorBadge();
   } else if (targetView === 'feeds') {
     $('#navFeeds')?.classList.add('active');
     renderFeedsView();
     if (!state.feeds.articles.length) refreshFeeds(false);
+  } else if (targetView === 'settings') {
+    $('#navSettings')?.classList.add('active');
+    renderSettingsView();
   }
 }
 
@@ -1286,19 +1708,19 @@ function renderChatView() {
       <div class="chat-welcome-state">
         <div class="chat-welcome-icon">◈</div>
         <h3>基于知识库的智能对话助手</h3>
-        <p>提问后系统将首先在本地 22,000+ 篇文档、工作记录与日记中精准检索 RAG 素材，并由大模型基于真实内容进行总结与解答，支持连续追问与来源溯源。</p>
+        <p>提问后系统会先在本地 Markdown vault 中检索相关素材，再由大模型基于真实内容进行总结与解答，支持连续追问与来源溯源。</p>
         <div class="chat-quick-cards">
-          <div class="quick-prompt-card" data-prompt="第十一批国家集采中选药品的监督检查总结是什么？">
-            <strong>📋 集采中选药品检查总结</strong>
-            <span>检索集采监管报告、现场检查缺陷统计与企业台账</span>
+          <div class="quick-prompt-card" data-prompt="总结最近一周的重点笔记">
+            <strong>📋 周重点总结</strong>
+            <span>检索近期笔记并整理主要事项、结论和后续动作</span>
           </div>
-          <div class="quick-prompt-card" data-prompt="梳理近期关于中药饮片与GAP相关的工作记录">
-            <strong>🌿 中药饮片与GAP检查记录</strong>
-            <span>总结中药材种植基地延伸检查、专门规定宣讲与企业约谈</span>
+          <div class="quick-prompt-card" data-prompt="列出最近需要跟进的待办事项">
+            <strong>✅ 待办跟进</strong>
+            <span>从知识库中提取近期任务、截止日期和未完成事项</span>
           </div>
-          <div class="quick-prompt-card" data-prompt="有哪些需要重点关注的药品生产风险隐患？">
-            <strong>⚠️ 药品质量安全风险隐患</strong>
-            <span>汇总风险会商材料、投诉举报线索与常见缺陷分析</span>
+          <div class="quick-prompt-card" data-prompt="根据当前知识库整理一个主题索引">
+            <strong>🧭 主题索引</strong>
+            <span>按主题聚合相关笔记，生成可继续扩展的索引</span>
           </div>
         </div>
       </div>
@@ -1517,39 +1939,67 @@ async function sendChatMessage(question) {
 // ==========================================================================
 // INITIALIZATION & BASE DATA
 // ==========================================================================
+function renderFolderTree() {
+  const container = $('#folders');
+  if (!container) return;
+  const renderNode = (node, depth = 0) => {
+    const hasChildren = Array.isArray(node.children) && node.children.length > 0;
+    const expanded = state.expandedFolders.has(node.path);
+    const selected = state.folder === node.path;
+    return `
+      <div class="folder-tree-node">
+        <div class="folder ${selected ? 'selected' : ''}" data-folder="${escapeHTML(node.path)}" style="--depth:${depth}">
+          <button class="folder-toggle ${expanded ? 'is-open' : ''}" data-folder-toggle="${escapeHTML(node.path)}" ${hasChildren ? '' : 'disabled'} title="${hasChildren ? '展开或收起' : ''}">▸</button>
+          <span class="folder-name">${escapeHTML(node.name)}</span>
+          <small>${node.count}</small>
+        </div>
+        ${hasChildren && expanded ? `<div class="folder-children">${node.children.map(child => renderNode(child, depth + 1)).join('')}</div>` : ''}
+      </div>
+    `;
+  };
+  container.innerHTML = state.folderTree.length
+    ? state.folderTree.map(node => renderNode(node)).join('')
+    : '<div class="folder-empty">暂无目录</div>';
+}
+
 async function loadBase() {
   initTaskModal();
   initNoteModal();
   initChatModule();
   state.dailyDate = today();
 
-  const [stats, folders, dates, taskData] = await Promise.all([
+  const [stats, folderTreeData, dates, taskData] = await Promise.all([
     api('/api/stats'),
-    api('/api/folders'),
+    api('/api/folder-tree'),
     api('/api/daily-dates'),
     api('/api/tasks')
   ]);
 
   $('#allCount').textContent = stats.notes.toLocaleString();
-  $('#syncTime').textContent = `${(stats.markdownBytes / 1024 / 1024).toFixed(0)} MB · ${folders.length} 目录`;
+  $('#syncTime').textContent = `${(stats.markdownBytes / 1024 / 1024).toFixed(0)} MB · ${folderTreeData.total || 0} 目录`;
   state.dates = dates || [];
   state.inboxTasks = taskData.tasks || [];
+  state.folderTree = folderTreeData.folders || [];
   updateTaskBadges();
 
   // Render Folder List in Sidebar
-  $('#folders').innerHTML = folders.map((f) => `
-    <div class="folder" data-folder="${escapeHTML(f.name)}">
-      <span>${escapeHTML(f.name)}</span>
-      <small>${f.count}</small>
-    </div>
-  `).join('');
+  renderFolderTree();
 
   $('#folders').onclick = (e) => {
+    const toggle = e.target.closest('[data-folder-toggle]');
+    if (toggle && !toggle.disabled) {
+      const folder = toggle.dataset.folderToggle;
+      if (state.expandedFolders.has(folder)) state.expandedFolders.delete(folder);
+      else state.expandedFolders.add(folder);
+      renderFolderTree();
+      return;
+    }
     const el = e.target.closest('.folder');
     if (el) {
       state.folder = el.dataset.folder;
       state.view = 'folder';
       switchMainView('notes');
+      renderFolderTree();
     }
   };
 
@@ -1572,6 +2022,8 @@ async function loadBase() {
         switchMainView('chat');
       } else if (navTarget === 'feeds') {
         switchMainView('feeds');
+      } else if (navTarget === 'settings') {
+        switchMainView('settings');
       } else {
         state.view = navTarget;
         state.folder = '';
@@ -1592,13 +2044,13 @@ async function loadBase() {
     switchMainView('daily');
   };
 
-  // New Note Draft Button
+  // New Temporary Draft Button
   $('#newDraftBtn').onclick = () => {
-    const title = prompt('新建浏览器草稿标题', '未命名笔记');
+    const title = prompt('新建临时草稿标题', '未命名笔记');
     if (title) {
       const n = {
         title,
-        path: `草稿/${title}.md`,
+        path: `临时草稿/${title}.md`,
         content: `# ${title}\n\n`,
         draft: true,
         mtime: Date.now(),

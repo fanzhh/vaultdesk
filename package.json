@@ -4,6 +4,25 @@
   "version": "1.0.0",
   "type": "module",
   "license": "MIT",
+  "author": "fanzhh <fanzhh@gmail.com>",
+  "homepage": "https://github.com/fanzhh/vaultdesk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fanzhh/vaultdesk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fanzhh/vaultdesk/issues"
+  },
+  "keywords": [
+    "obsidian",
+    "markdown",
+    "vault",
+    "notes",
+    "pwa",
+    "rss",
+    "rag",
+    "local-first"
+  ],
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js && node --check public/app.js"

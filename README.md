@@ -12,9 +12,10 @@ VaultDesk 是一个本地优先的 Markdown 知识库 Web 工作台，适合用�
 
 - 浏览 Markdown 笔记和每日笔记。
 - 在指定目录中新建、编辑 Markdown 笔记。
-- 管理 `01_AREAS/Inbox.md` 中的待办事项。
+- 管理一个可配置的 Markdown 待办文件。
 - 聚合 RSS 源，记录已读状态，并把稍后读条目写入 vault。
 - 通过本地检索脚本和 LM Studio、Ollama 或 DeepSeek 对知识库进行问答。
+- 可选：选择 vault 目录与本机嵌入模型（Ollama / LM Studio）建立向量索引，实现语义搜索；目录内容变化会被监控并自动增量向量化。
 - 适配桌面和 iPad/平板竖屏使用。
 
 ### 运行要求
@@ -39,6 +40,8 @@ HOST=127.0.0.1
 PORT=4177
 ```
 
+也可以启动后在网页的「设置」页面填写这些配置；保存后会写入 `.env`，重启服务后生效。每日笔记模板也在「设置」页面编辑，保存到应用自己的 `data/daily-template.md`，不会读取 Obsidian 模板文件。
+
 然后打开：
 
 ```text
@@ -57,6 +60,10 @@ http://localhost:4177
 | `LMSTUDIO_BASE_URL` | LM Studio 的 OpenAI 兼容接口地址。 |
 | `DEEPSEEK_API_KEY` | 配置后启用 DeepSeek 云端模型。不要提交到 Git。 |
 | `KB_SEARCH_SCRIPT` | 可选，知识问答使用的 vault 检索脚本路径。 |
+| `VAULT_INBOX_PATH` | 可选，待办文件路径。默认是 `Inbox.md`。 |
+| `VAULT_DAILY_PATH_PATTERN` | 可选，每日笔记路径模板。默认是 `Daily/{YYYY}-{MM}-{DD}.md`。 |
+| `VAULT_RSS_READ_LATER_PATH` | 可选，RSS 稍后读保存文件。默认是 `read-later.md`。 |
+| `VAULT_CHAT_SAVE_PATH_PATTERN` | 可选，问答保存路径模板。默认是 `answers/{YYYY}-{MM}-{DD}-answer-{slug}.md`。 |
 
 ### 安全说明
 
@@ -75,6 +82,7 @@ VaultDesk 不是多用户 Web 应用。它包含能写入本地 vault 的接口�
 - `logs/`
 - `data/feed-read.json`
 - `data/feeds-cache.json`
+- `data/vector-meta.json` 与 `data/vector-data.bin`（向量索引）
 - `.env`
 - Python 缓存文件
 
@@ -83,6 +91,16 @@ VaultDesk 不是多用户 Web 应用。它包含能写入本地 vault 的接口�
 默认 RSS 源配置在 `feeds.json`。已读状态和抓取缓存保存在 `data/` 下，这些文件属于本地运行状态，不应提交到仓库。
 
 如果内置 RSS 抓取能力不够，可以替换为 Miniflux 等专门的 RSS 服务，同时保留现有前端和稍后读写入逻辑。
+
+### 向量化语义搜索
+
+在「设置 → 向量化语义搜索」中：
+
+1. 选择 vault 内要向量化的目录（留空表示整个 vault）；
+2. 选择嵌入服务（Ollama 或 LM Studio）与已安装的 embedding 模型（如 `qwen3-embedding`、`bge-m3`、`nomic-embed-text`）；
+3. 点击「开始向量化」。任务在后台执行，可随时停止。
+
+索引完成后，「知识问答」会自动把语义检索结果与关键词检索合并；目录内 `.md/.txt` 文件的新增、修改、删除会被监控并自动增量向量化。更换模型或目录后需要重建索引。索引数据保存在应用 `data/` 目录，不会写入 vault。
 
 ### 开发
 
@@ -124,9 +142,10 @@ The app is designed for personal use on a trusted machine. By default, it only l
 
 - Browse Markdown notes and daily notes from a vault.
 - Create and update Markdown notes in configured folders.
-- Manage tasks from `01_AREAS/Inbox.md`.
+- Manage tasks from a configurable Markdown task file.
 - Read RSS feeds, track read state, and save read-later items to the vault.
 - Ask questions against the vault through a local RAG helper and LM Studio, Ollama, or DeepSeek.
+- Optional: build a vector index over a vault folder with a local embedding model (Ollama / LM Studio) for semantic search; file changes are watched and indexed incrementally.
 - Responsive layout for desktop and tablet use.
 
 ### Requirements
@@ -151,6 +170,8 @@ HOST=127.0.0.1
 PORT=4177
 ```
 
+You can also use the in-app Settings page to write these values to `.env`; restart the server after saving. The daily note template is edited there too and saved to the app-owned `data/daily-template.md`; Obsidian template files are not read.
+
 Open:
 
 ```text
@@ -169,6 +190,10 @@ The server reads `.env` automatically. Supported variables:
 | `LMSTUDIO_BASE_URL` | OpenAI-compatible local LM Studio endpoint. |
 | `DEEPSEEK_API_KEY` | Enables DeepSeek cloud models. Do not commit this value. |
 | `KB_SEARCH_SCRIPT` | Optional path to the vault search helper used by chat. |
+| `VAULT_INBOX_PATH` | Optional task file path. Defaults to `Inbox.md`. |
+| `VAULT_DAILY_PATH_PATTERN` | Optional daily note path pattern. Defaults to `Daily/{YYYY}-{MM}-{DD}.md`. |
+| `VAULT_RSS_READ_LATER_PATH` | Optional RSS read-later file path. Defaults to `read-later.md`. |
+| `VAULT_CHAT_SAVE_PATH_PATTERN` | Optional saved-answer path pattern. Defaults to `answers/{YYYY}-{MM}-{DD}-answer-{slug}.md`. |
 
 ### Security Notes
 
@@ -187,6 +212,7 @@ Runtime data is intentionally ignored by Git:
 - `logs/`
 - `data/feed-read.json`
 - `data/feeds-cache.json`
+- `data/vector-meta.json` and `data/vector-data.bin` (vector index)
 - `.env`
 - Python cache files
 
@@ -195,6 +221,16 @@ Runtime data is intentionally ignored by Git:
 Default feeds are configured in `feeds.json`. Read state and cached feed items live under `data/` and should not be committed.
 
 If you outgrow the built-in RSS fetcher, consider replacing the fetch layer with Miniflux while keeping the frontend and read-later bridge.
+
+### Semantic Search (Vectorization)
+
+In "Settings → 向量化语义搜索":
+
+1. Pick a folder inside the vault to index (leave empty for the whole vault);
+2. Pick an embedding service (Ollama or LM Studio) and an installed embedding model, e.g. `qwen3-embedding`, `bge-m3`, or `nomic-embed-text`;
+3. Click "开始向量化". Indexing runs in the background and can be stopped at any time.
+
+Once indexed, "知识问答" automatically merges semantic retrieval with keyword retrieval. New, modified, or deleted `.md/.txt` files inside the watched folder are re-indexed incrementally. Changing the model or folder requires rebuilding the index. Index data lives in the app's `data/` directory and is never written into the vault.
 
 ### Development
 

@@ -32,7 +32,7 @@
 
       <!-- Quick Action in Sidebar -->
       <button class="new-note-btn" id="newDraftBtn">
-        <span>＋</span> 新建浏览器草稿
+        <span>＋</span> 新建临时草稿
       </button>
       <button class="new-note-btn" id="newNoteBtn" style="background:transparent;border:1px solid var(--dark-border);color:var(--dark-text);margin-top:8px">
         <span>＋</span> 新建笔记（写入知识库）
@@ -79,8 +79,12 @@
         </button>
         <button class="nav-item" data-nav="drafts" id="navDrafts">
           <span class="nav-icon">✎</span>
-          <span class="nav-title">浏览器草稿</span>
+          <span class="nav-title">临时草稿</span>
           <em class="nav-badge" id="draftCount">0</em>
+        </button>
+        <button class="nav-item" data-nav="settings" id="navSettings">
+          <span class="nav-icon">⚙</span>
+          <span class="nav-title">设置</span>
         </button>
       </nav>
 
@@ -143,6 +147,10 @@
           <button class="switcher-tab" data-view-target="chat" id="switcherChat" role="tab">
             <span class="tab-icon">💬</span>
             <span>知识问答</span>
+          </button>
+          <button class="switcher-tab" data-view-target="settings" id="switcherSettings" role="tab">
+            <span class="tab-icon">⚙</span>
+            <span>设置</span>
           </button>
         </div>
 
@@ -247,9 +255,9 @@
                   <label class="control-label" for="chatScopeSelect">检索范围:</label>
                   <select id="chatScopeSelect" class="chat-select">
                     <option value="">全知识库</option>
-                    <option value="01_AREAS/work">01_AREAS/work (工作文档)</option>
-                    <option value="01_AREAS/Daily">01_AREAS/Daily (每日日记)</option>
-                    <option value="02_RESOURCES">02_RESOURCES (参考资料)</option>
+                    <option value="notes">notes</option>
+                    <option value="Daily">Daily</option>
+                    <option value="resources">resources</option>
                   </select>
                 </div>
                 <button class="btn btn-secondary chat-btn" id="btnClearChat" title="清空当前对话">🧹 清空记录</button>
@@ -265,9 +273,9 @@
             <div class="chat-input-wrapper">
               <div class="chat-suggestions-bar" id="chatSuggestionsBar">
                 <span class="sug-hint">推荐提问:</span>
-                <button class="sug-pill" data-prompt="第十一批国家集采中选药品的监督检查总结是什么？">📋 集采监督检查总结</button>
-                <button class="sug-pill" data-prompt="梳理近期关于中药饮片与GAP相关的工作记录">🌿 中药与GAP记录</button>
-                <button class="sug-pill" data-prompt="有哪些需要重点关注的药品生产风险隐患？">⚠️ 药品生产风险隐患</button>
+                <button class="sug-pill" data-prompt="总结最近一周的重点笔记">📋 周重点总结</button>
+                <button class="sug-pill" data-prompt="列出最近需要跟进的待办事项">✅ 待办跟进</button>
+                <button class="sug-pill" data-prompt="根据当前知识库整理一个主题索引">🧭 主题索引</button>
               </div>
               <form class="chat-input-form" id="chatInputForm">
                 <textarea id="chatInputText" class="chat-textarea" placeholder="输入你想咨询知识库的问题... (支持多轮连续追问，Enter 发送，Shift+Enter 换行)" rows="2"></textarea>
@@ -277,6 +285,13 @@
                 </button>
               </form>
             </div>
+          </div>
+        </div>
+
+        <!-- ================= PANE 6: SETTINGS VIEW (网页配置) ================= -->
+        <div class="view-pane" id="paneSettings">
+          <div class="settings-workspace" id="settingsContainer">
+            <!-- Rendered by renderSettingsView() -->
           </div>
         </div>
 
@@ -303,8 +318,6 @@
           <span class="modal-tag" data-tag="#reading">+ #reading</span>
           <span class="modal-tag" data-tag="#personal">+ #personal</span>
           <span class="modal-tag" data-tag="#study">+ #study</span>
-          <span class="modal-tag" data-tag="#整改">+ #整改</span>
-          <span class="modal-tag" data-tag="#报销">+ #报销</span>
           <span class="modal-tag" data-tag="🔼">+ 🔼 优先</span>
         </div>
       </div>
@@ -330,13 +343,11 @@
         <input type="text" id="noteTitleInput" class="task-modal-input" placeholder="笔记标题" autocomplete="off">
         <label class="form-label">存放位置</label>
         <select id="noteFolderSelect" class="chat-select note-folder-select">
-          <option value="01_AREAS/notes">📝 01_AREAS/notes（随手记）</option>
-          <option value="01_AREAS/work/notes">💼 01_AREAS/work/notes（工作）</option>
-          <option value="01_AREAS/learning">📖 01_AREAS/learning（学习）</option>
-          <option value="01_AREAS/reading">📚 01_AREAS/reading（阅读）</option>
-          <option value="01_AREAS/family">👨‍👩‍👧 01_AREAS/family（家庭）</option>
-          <option value="01_AREAS/health">❤️ 01_AREAS/health（健康）</option>
-          <option value="01_AREAS/personal">🎯 01_AREAS/personal（Personal）</option>
+          <option value="notes">📝 notes</option>
+          <option value="work">💼 work</option>
+          <option value="learning">📖 learning</option>
+          <option value="reading">📚 reading</option>
+          <option value="personal">🎯 personal</option>
         </select>
         <label class="form-label">正文（Markdown）</label>
         <textarea id="noteBodyInput" class="task-modal-textarea" rows="10" placeholder="正文内容..."></textarea>

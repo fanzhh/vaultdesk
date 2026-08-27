@@ -5,6 +5,9 @@ node_modules/
 logs/
 data/feed-read.json
 data/feeds-cache.json
+data/vector-meta.json
+data/vector-data.bin
+data/daily-template.md
 data/*.tmp-*
 
 # Python cache
@@ -15,4 +18,3 @@ __pycache__/
 .DS_Store
 .vscode/
 .idea/
-
