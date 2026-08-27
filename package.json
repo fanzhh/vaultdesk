@@ -1,0 +1,14 @@
+{
+  "name": "vaultdesk",
+  "description": "A local-first web workbench for browsing, editing, and querying an Obsidian-style Markdown vault.",
+  "version": "1.0.0",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check public/app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

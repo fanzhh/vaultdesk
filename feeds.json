@@ -1,0 +1,7 @@
+[
+  { "key": "hn", "name": "Hacker News", "url": "https://hnrss.org/frontpage", "max": 25 },
+  { "key": "simonwillison", "name": "Simon Willison", "url": "https://simonwillison.net/atom/everything/", "max": 15 },
+  { "key": "importai", "name": "Import AI", "url": "https://importai.substack.com/feed", "max": 10 },
+  { "key": "qbitai", "name": "量子位", "url": "https://www.qbitai.com/feed", "max": 15 },
+  { "key": "sspai", "name": "少数派", "url": "https://sspai.com/feed", "max": 10 }
+]

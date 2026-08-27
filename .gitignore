@@ -1,0 +1,18 @@
+.env
+node_modules/
+
+# Runtime state
+logs/
+data/feed-read.json
+data/feeds-cache.json
+data/*.tmp-*
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# macOS/editor noise
+.DS_Store
+.vscode/
+.idea/
+
