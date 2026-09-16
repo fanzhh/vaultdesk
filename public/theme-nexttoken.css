@@ -1,0 +1,157 @@
+/* ==========================================================================
+   VaultDesk · nexttoken 皮肤（叠加层，不改原 styles.css）
+   用法：放在 public/theme-nexttoken.css，在 index.html 的 styles.css 之后引一行
+        <link rel="stylesheet" href="/theme-nexttoken.css">
+   回退：删掉那一行即可，原样式零影响。
+   --------------------------------------------------------------------------
+   设计规则（来自 nexttoken.tv）：
+   1) 全部纸底 #f1eee5，无圆角、无阴影、无渐变
+   2) 只用 1px 实线（#111 主线 / rgba(17,17,17,.24) 细线）划分层级
+   3) 唯一强调色 #ff4b18，只用于当前项、关键数字、编号、重点
+   4) 深色侧栏 → 纸底 + 1px 黑线；按钮/标签一律方角描边
+   5) 标题与数字用 League Spartan Black（拉丁/数字），正文用系统字体
+   ========================================================================== */
+
+:root{
+  --bg:#f1eee5; --panel:#f1eee5; --panel-sub:#f7f4ec;
+  --ink:#111111; --ink-secondary:#2d2b27; --muted:#635f58;
+  --line:#111111; --line-sub:rgba(17,17,17,.24);
+  --accent:#ff4b18; --accent-hover:#e63f10; --accent-soft:rgba(255,75,24,.07); --accent-soft-border:rgba(255,75,24,.35);
+  --dark:#f1eee5; --dark-panel:#f1eee5; --dark-border:rgba(17,17,17,.24);
+  --dark-text:#111111; --dark-muted:#635f58;
+  --success:#2f6b3f; --success-soft:rgba(47,107,63,.08);
+  --warning:#a96a00; --warning-soft:rgba(169,106,0,.08);
+  --danger:#c0392b; --danger-soft:rgba(192,57,43,.08);
+  --shadow-sm:none; --shadow-md:none; --shadow-lg:none;
+  --radius-sm:0; --radius-md:0; --radius-lg:0;
+  --display:"League Spartan","Arial Black",Arial,sans-serif;
+}
+
+/* ---------- 全局：纸底、方角、去阴影 ---------- */
+body, body.warm{ background:var(--bg); color:var(--ink); }
+*{ border-radius:0 !important; box-shadow:none !important; }
+.chat-avatar{ border-radius:50% !important; }   /* 头像例外：与 nexttoken 的圆形说话人头像一致 */
+.status-dot{ border-radius:50% !important; }
+::selection{ background:var(--accent); color:#fffdf6; }
+
+/* ---------- 侧栏：深色 → 纸底 + 1px 黑线 ---------- */
+.sidebar{ background:var(--bg); color:var(--ink); border-right:1px solid var(--ink); }
+.sidebar .section-label, .eyebrow, .sidebar-foot, .calendar-hint, .folder small{
+  color:var(--muted); letter-spacing:.15em; text-transform:uppercase; font-size:.68rem; font-weight:800;
+}
+.nav-item{ color:var(--ink); border-left:2px solid transparent; }
+.nav-item:hover{ background:rgba(17,17,17,.05); color:var(--ink); }
+.nav-item.active{ background:transparent; border-left:2px solid var(--accent); color:var(--ink); }
+.nav-item.active .nav-icon{ color:var(--accent); }
+.nav-badge{ background:var(--accent); color:#fffdf6; font-weight:800; }
+.new-note-btn, .search-box, .cal-date-input, .lang-select{ background:transparent; border:1px solid var(--ink); color:var(--ink); }
+.new-note-btn:hover{ background:var(--ink); color:#fffdf6; border-color:var(--ink); }
+.search-box kbd{ border:1px solid var(--line-sub); color:var(--muted); }
+.status-dot{ background:var(--accent); }
+.folder:hover, .folder.selected{ background:rgba(17,17,17,.05); color:var(--ink); }
+.folder.selected{ border-left:2px solid var(--accent); }
+
+/* ---------- 顶栏：1px 黑线 ---------- */
+.topbar, body.warm .topbar{ background:var(--bg); border-bottom:1px solid var(--ink); }
+.crumb-section, .crumb-sep{ color:var(--muted); letter-spacing:.06em; text-transform:uppercase; font-size:.72rem; font-weight:800; }
+.crumb-target{ color:var(--ink); }
+.icon-btn{ border:1px solid var(--ink); color:var(--ink); background:transparent; }
+.icon-btn:hover{ background:var(--ink); color:#fffdf6; }
+
+/* ---------- 标题：显示字体 + 收紧字距 ---------- */
+h1,h2,h3,.daily-paper-title,.reader-title-area h2,.chat-header-left h2,.tasks-title-wrap h1,.settings-head h1,.chat-welcome-state h3{
+  font-family:var(--display); font-weight:900; letter-spacing:.005em; color:var(--ink);
+}
+
+/* ---------- 按钮：方角描边；主按钮 = 橙红底黑字 ---------- */
+.btn, .task-add-submit, .chat-btn, .chat-send-btn, .task-row-btn, .icon-btn, .cal-today-btn{
+  border:1px solid var(--ink); background:transparent; color:var(--ink); font-weight:800;
+}
+.btn:hover, .task-row-btn:hover, .cal-today-btn:hover{ background:var(--ink); color:#fffdf6; }
+.btn-primary, .task-add-submit, .chat-send-btn{ background:var(--accent); border-color:var(--accent); color:#111111; font-weight:900; }
+.btn-primary:hover, .task-add-submit:hover, .chat-send-btn:hover{ background:var(--ink); border-color:var(--ink); color:#fffdf6; }
+.btn-secondary{ border:1px solid var(--ink); background:transparent; color:var(--ink); }
+
+/* ---------- 卡片 / 面板：纸底 + 顶边黑线，无圆角无阴影 ---------- */
+.daily-paper, .daily-header-card, .stat-card, .task-add-card, .note-card, .settings-panel,
+.custom-provider-card, .chat-bubble, .feed-article-card, .quick-prompt-card, .daily-insights-box,
+.task-empty-card, .empty-reader, .chat-welcome-state{
+  background:transparent; border:0; border-top:1px solid var(--ink); padding-top:1rem;
+}
+.stat-card:hover, .note-card:hover, .feed-article-card:hover, .quick-prompt-card:hover{
+  background:rgba(17,17,17,.04); transform:none;
+}
+.note-card.selected{ background:rgba(255,75,24,.07); border-left:2px solid var(--accent); }
+
+/* ---------- 数字：显示字体 + 橙红 ---------- */
+.stat-val, .daily-insights-count, .result-count, .feed-source-count, .task-group-count{
+  font-family:var(--display); font-weight:900; color:var(--ink);
+}
+.stat-card.stat-today .stat-val, .stat-card.stat-overdue .stat-val{ color:var(--accent); }
+.stat-label{ color:var(--muted); letter-spacing:.06em; text-transform:uppercase; font-size:.68rem; font-weight:800; }
+
+/* ---------- 标签 / 徽标：方角描边 ---------- */
+.badge, .task-tag, .md-task-chip, .modal-tag, .quick-tag-btn, .sug-pill{
+  border:1px solid var(--line-sub); background:transparent; color:var(--ink); font-weight:700;
+}
+.badge-success{ border-color:var(--success); color:var(--success); }
+.badge-warning, .task-due-badge.is-today{ border-color:var(--warning); color:var(--warning); }
+.task-due-badge.is-overdue{ border-color:var(--accent); color:var(--accent); }
+.task-tag.tag-work, .md-task-chip.active, .quick-tag-btn:hover{ border-color:var(--accent); color:var(--accent); }
+.task-due-badge, .task-done-badge{ background:transparent; border:1px solid var(--line-sub); color:var(--muted); }
+
+/* ---------- 列表行：1px 细线，不做圆角卡 ---------- */
+.task-card-row, .feed-source-item, .dir-picker-row, .builtin-provider-row, .chat-source-item{
+  border-bottom:1px solid var(--line-sub); background:transparent;
+}
+.task-card-row:hover, .feed-source-item:hover, .dir-picker-row:hover{ background:rgba(17,17,17,.04); }
+.task-card-row.is-done .task-title-text{ color:var(--muted); }
+.feed-source-item.active{ background:transparent; border-left:2px solid var(--accent); }
+.feed-article-card.is-unread{ border-left:2px solid var(--accent); }
+
+/* ---------- 输入：方角描边，白纸底 ---------- */
+input, textarea, select, .task-add-input, .task-search-input, .list-filter-input,
+.feed-add-input, .chat-textarea, .task-modal-input, .task-modal-textarea, .settings-field input,
+.settings-template-editor, .draft-editor, .dir-picker-path, .note-folder-select{
+  background:#fffdf6; border:1px solid var(--ink); color:var(--ink);
+}
+input:focus, textarea:focus, select:focus{ outline:2px solid var(--accent); outline-offset:0; border-color:var(--accent); }
+
+/* ---------- 对话气泡：方角描边，用户侧黑底反白 ---------- */
+.chat-bubble{ border:1px solid var(--ink); background:transparent; padding:.9rem 1rem; }
+.user-row .chat-bubble{ background:var(--ink); color:#fffdf6; border-color:var(--ink); }
+.user-row .chat-bubble p{ color:#fffdf6; }
+.assistant-row .chat-bubble{ background:transparent; color:var(--ink); }
+.chat-avatar{ background:transparent; border:1px solid var(--ink); color:var(--ink); font-family:var(--display); font-weight:900; }
+
+/* ---------- Markdown 阅读区：正文 1.9 行高，引用块橙红左条 ---------- */
+.markdown{ color:var(--ink-secondary); line-height:1.9; }
+.markdown p{ color:var(--ink-secondary); }
+.markdown h1,.markdown h2,.markdown h3{ font-family:var(--display); font-weight:900; color:var(--ink); }
+.markdown blockquote{ background:var(--accent-soft); border-left:4px solid var(--accent); padding:.9rem 1rem; color:var(--ink); }
+.markdown code{ background:rgba(17,17,17,.06); color:var(--ink); }
+.markdown pre{ background:#fffdf6; border:1px solid var(--ink); }
+.markdown a{ color:var(--ink); text-decoration:underline; text-decoration-color:var(--accent); text-underline-offset:.18em; text-decoration-thickness:2px; }
+.markdown table{ border-collapse:collapse; }
+.markdown th, .markdown td{ border-bottom:1px solid var(--line-sub); }
+.markdown th{ border-bottom:1px solid var(--ink); color:var(--ink); }
+.markdown tr:nth-child(even){ background:transparent; }
+.markdown .wikilink{ color:var(--accent); }
+
+/* ---------- 弹窗 / 提示 ---------- */
+.task-modal, dialog{ background:var(--bg); border:1px solid var(--ink); color:var(--ink); }
+.task-modal::backdrop{ background:rgba(17,17,17,.45); }
+.toast{ background:var(--ink); color:#fffdf6; border:0; }
+.toast.show{ background:var(--ink); }
+
+/* ---------- 滚动条 ---------- */
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background:rgba(17,17,17,.25); }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- 显示字体（League Spartan Black, OFL） ---------- */
+@font-face{
+  font-family:"League Spartan";
+  src:url("/league-spartan-black.ttf") format("truetype");
+  font-weight:900; font-style:normal; font-display:swap;
+}
