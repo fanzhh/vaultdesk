@@ -28,87 +28,86 @@
 
       <div class="vault-status">
         <span class="status-dot"></span>
-        <span>本机运行 · 可写入 vault</span>
+        <span data-i18n="本机运行 · 可写入 vault">本机运行 · 可写入 vault</span>
       </div>
 
       <!-- Quick Action in Sidebar -->
-      <button class="new-note-btn" id="newDraftBtn">
-        <span>＋</span> 新建临时草稿
-      </button>
-      <button class="new-note-btn" id="newNoteBtn" style="background:transparent;border:1px solid var(--dark-border);color:var(--dark-text);margin-top:8px">
-        <span>＋</span> 新建笔记（写入知识库）
+      <button class="new-note-btn" id="newNoteBtn">
+        <span>＋</span> <span data-i18n="新建笔记">新建笔记</span>
       </button>
 
       <!-- Global Search -->
       <label class="search-box">
         <span class="search-icon">⌕</span>
-        <input id="search" placeholder="搜索笔记、路径或标签" autocomplete="off">
+        <input id="search" placeholder="搜索笔记、路径或标签" data-i18n-ph="搜索笔记、路径或标签" autocomplete="off">
         <kbd>⌘ K</kbd>
       </label>
 
       <!-- Primary Sidebar Nav -->
-      <div class="section-label">核心模块</div>
+      <div class="section-label" data-i18n="核心模块">核心模块</div>
       <nav class="nav-menu">
         <button class="nav-item active" data-nav="daily" id="navDaily">
           <span class="nav-icon">📅</span>
-          <span class="nav-title">每日日记</span>
-          <em class="nav-badge" id="dailyDateBadge">今天</em>
+          <span class="nav-title" data-i18n="每日日记">每日日记</span>
+          <em class="nav-badge" id="dailyDateBadge" data-i18n="今天">今天</em>
         </button>
         <button class="nav-item" data-nav="tasks" id="navTasks">
           <span class="nav-icon">✅</span>
-          <span class="nav-title">事项清单</span>
-          <em class="nav-badge alert-badge" id="sidebarTaskBadge">0</em>
+          <span class="nav-title" data-i18n="事项清单">事项清单</span>
+          <em class="nav-badge" id="sidebarTaskBadge" hidden>0</em>
         </button>
         <button class="nav-item" data-nav="feeds" id="navFeeds">
           <span class="nav-icon">📡</span>
-          <span class="nav-title">资讯聚合</span>
-          <em class="nav-badge alert-badge" id="sidebarFeedBadge">0</em>
+          <span class="nav-title" data-i18n="资讯聚合">资讯聚合</span>
+          <em class="nav-badge" id="sidebarFeedBadge" hidden>0</em>
         </button>
         <button class="nav-item" data-nav="all" id="navAll">
           <span class="nav-icon">▦</span>
-          <span class="nav-title">全部笔记</span>
+          <span class="nav-title" data-i18n="全部笔记">全部笔记</span>
           <em class="nav-badge" id="allCount">—</em>
         </button>
         <button class="nav-item" data-nav="chat" id="navChat">
           <span class="nav-icon">💬</span>
-          <span class="nav-title">知识问答</span>
-          <em class="nav-badge" style="background:#e0f2fe;color:#0369a1">RAG</em>
-        </button>
-        <button class="nav-item" data-nav="recent" id="navRecent">
-          <span class="nav-icon">◷</span>
-          <span class="nav-title">最近更新</span>
-        </button>
-        <button class="nav-item" data-nav="drafts" id="navDrafts">
-          <span class="nav-icon">✎</span>
-          <span class="nav-title">临时草稿</span>
-          <em class="nav-badge" id="draftCount">0</em>
+          <span class="nav-title" data-i18n="知识问答">知识问答</span>
+          <em class="nav-badge">RAG</em>
         </button>
         <button class="nav-item" data-nav="settings" id="navSettings">
           <span class="nav-icon">⚙</span>
-          <span class="nav-title">设置</span>
+          <span class="nav-title" data-i18n="系统设置">系统设置</span>
         </button>
       </nav>
 
       <!-- Calendar Widget in Sidebar -->
       <div class="sidebar-calendar-widget">
         <div class="calendar-head">
-          <span class="cal-title">日历快速跳转</span>
-          <button class="cal-today-btn" id="sideTodayBtn">回到今天</button>
+          <span class="cal-title" data-i18n="日历快速跳转">日历快速跳转</span>
+          <button class="cal-today-btn" id="sideTodayBtn" data-i18n="回到今天">回到今天</button>
         </div>
         <div class="calendar-input-wrap">
           <input type="date" id="sideDailyDate" class="cal-date-input">
         </div>
-        <div class="calendar-hint" id="sideDailyHint">选择日期查看当日日记</div>
+        <div class="calendar-hint" id="sideDailyHint" data-i18n="选择日期查看当日日记">选择日期查看当日日记</div>
       </div>
 
-      <!-- Folders section -->
-      <div class="section-label">Vault 目录</div>
-      <div id="folders" class="folder-list"></div>
+      <!-- Folders section: occupies remaining height, scrolls internally -->
+      <div class="vault-section">
+        <div class="section-label" data-i18n="Vault 目录">Vault 目录</div>
+        <div id="folders" class="folder-list"></div>
+      </div>
+
+      <!-- Language switcher -->
+      <div class="lang-switch">
+        <span class="lang-icon">🌐</span>
+        <select id="langSelect" class="lang-select" aria-label="Language">
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </select>
+      </div>
 
       <!-- Sidebar footer -->
       <div class="sidebar-foot">
-        <span>Markdown vault</span>
-        <span id="syncTime">正在读取…</span>
+        <span id="vaultNameLabel" data-i18n="Markdown vault">Markdown vault</span>
+        <span id="syncTime" data-i18n="正在读取…">正在读取…</span>
       </div>
     </aside>
 
@@ -117,7 +116,9 @@
       <!-- Topbar Header -->
       <header class="topbar">
         <div class="topbar-left">
-          <button class="icon-btn mobile-only" id="menu" title="打开侧边栏">☰</button>
+          <button class="icon-btn mobile-only" id="menu" title="打开侧边栏" data-i18n-title="打开侧边栏">☰</button>
+          <button class="icon-btn" id="btnNavBack" title="返回上一页" data-i18n-title="返回上一页" aria-label="返回上一页" disabled>←</button>
+          <button class="icon-btn" id="btnNavForward" title="前进一页" data-i18n-title="前进一页" aria-label="前进一页" disabled>→</button>
           <div class="crumb" id="crumb">
             <span class="crumb-section" id="crumbSection">日记</span>
             <span class="crumb-sep">/</span>
@@ -125,40 +126,10 @@
           </div>
         </div>
 
-        <!-- Center View Switcher Tabs -->
-        <div class="view-switcher" role="tablist">
-          <button class="switcher-tab active" data-view-target="daily" id="switcherDaily" role="tab">
-            <span class="tab-icon">📅</span>
-            <span>每日日记</span>
-          </button>
-          <button class="switcher-tab" data-view-target="tasks" id="switcherTasks" role="tab">
-            <span class="tab-icon">✅</span>
-            <span>待办事项</span>
-            <span class="tab-badge" id="topTaskBadge">0</span>
-          </button>
-          <button class="switcher-tab" data-view-target="feeds" id="switcherFeeds" role="tab">
-            <span class="tab-icon">📡</span>
-            <span>资讯聚合</span>
-            <span class="tab-badge" id="topFeedBadge">0</span>
-          </button>
-          <button class="switcher-tab" data-view-target="notes" id="switcherNotes" role="tab">
-            <span class="tab-icon">📚</span>
-            <span>知识库笔记</span>
-          </button>
-          <button class="switcher-tab" data-view-target="chat" id="switcherChat" role="tab">
-            <span class="tab-icon">💬</span>
-            <span>知识问答</span>
-          </button>
-          <button class="switcher-tab" data-view-target="settings" id="switcherSettings" role="tab">
-            <span class="tab-icon">⚙</span>
-            <span>设置</span>
-          </button>
-        </div>
-
         <!-- Topbar Right Actions -->
         <div class="top-actions">
-          <button class="icon-btn" id="toggleFocus" title="专注阅读模式">⤢</button>
-          <button class="icon-btn" id="toggleTheme" title="切换柔和配色">◐</button>
+          <button class="icon-btn" id="toggleFocus" title="专注阅读模式" data-i18n-title="专注阅读模式">⤢</button>
+          <button class="icon-btn" id="toggleTheme" title="切换柔和配色" data-i18n-title="切换柔和配色">◐</button>
         </div>
       </header>
 
@@ -184,13 +155,13 @@
           <div class="feeds-workspace">
             <section class="feeds-pane-toolbar">
               <div class="feeds-toolbar-left">
-                <button class="btn btn-secondary feed-refresh-btn" id="btnRefreshFeeds">🔄 刷新</button>
-                <button class="btn btn-secondary feed-unread-toggle" id="btnFeedUnread">🔴 未读</button>
-                <button class="btn btn-secondary" id="btnFeedAllRead">✓ 全部已读</button>
+                <button class="btn btn-secondary feed-refresh-btn" id="btnRefreshFeeds" data-i18n="🔄 刷新">🔄 刷新</button>
+                <button class="btn btn-secondary feed-unread-toggle" id="btnFeedUnread" data-i18n="🔴 未读">🔴 未读</button>
+                <button class="btn btn-secondary" id="btnFeedAllRead" data-i18n="✓ 全部已读">✓ 全部已读</button>
               </div>
               <div class="feeds-toolbar-right">
-                <input type="url" id="feedAddInput" class="feed-add-input" placeholder="添加 RSS 源 URL..." autocomplete="off">
-                <button class="btn btn-primary feed-add-btn" id="btnAddFeed">＋ 添加</button>
+                <input type="url" id="feedAddInput" class="feed-add-input" placeholder="添加 RSS 源 URL..." data-i18n-ph="添加 RSS 源 URL..." autocomplete="off">
+                <button class="btn btn-primary feed-add-btn" id="btnAddFeed" data-i18n="＋ 添加">＋ 添加</button>
               </div>
             </section>
             <div class="feeds-body">
@@ -208,16 +179,16 @@
               <div class="notes-list-header">
                 <div class="list-head-title">
                   <div class="eyebrow" id="notesEyebrow">VAULT EXPLORER</div>
-                  <h1 class="notes-title" id="listTitle">全部笔记</h1>
+                  <h1 class="notes-title" id="listTitle" data-i18n="全部笔记">全部笔记</h1>
                 </div>
                 <span class="result-count" id="resultCount">—</span>
-                <button class="btn btn-primary note-add-btn" id="btnNewNote">＋ 新建笔记</button>
+                <button class="btn btn-primary note-add-btn" id="btnNewNote" data-i18n="＋ 新建笔记">＋ 新建笔记</button>
               </div>
-              <div class="list-sub" id="listSub">从原始 vault 直接读取，保持文件不变</div>
-              
+              <div class="list-sub" id="listSub" data-i18n="从原始 vault 直接读取，保持文件不变">从原始 vault 直接读取，保持文件不变</div>
+
               <!-- Quick search inside list -->
               <div class="list-filter-bar">
-                <input type="text" id="listFilterInput" class="list-filter-input" placeholder="在当前列表中快速过滤...">
+                <input type="text" id="listFilterInput" class="list-filter-input" placeholder="在当前列表中快速过滤..." data-i18n-ph="在当前列表中快速过滤...">
               </div>
 
               <div id="noteList" class="notes-scroll-list"></div>
@@ -227,9 +198,9 @@
             <section class="notes-pane-reader" id="noteReader">
               <div class="empty-reader">
                 <div class="empty-icon">◌</div>
-                <h2>打开一篇笔记</h2>
-                <p>在左侧列表中选择笔记，开始浏览或在浏览器内编辑。</p>
-                <div class="shortcut-hint">快捷键：⌘ K 搜索 · 点击左侧卡片打开</div>
+                <h2 data-i18n="打开一篇笔记">打开一篇笔记</h2>
+                <p data-i18n="在左侧列表中选择笔记，开始浏览或编辑。">在左侧列表中选择笔记，开始浏览或编辑。</p>
+                <div class="shortcut-hint" data-i18n="快捷键：⌘ K 搜索 · 点击左侧卡片打开">快捷键：⌘ K 搜索 · 点击左侧卡片打开</div>
               </div>
             </section>
           </div>
@@ -242,26 +213,23 @@
             <div class="chat-header">
               <div class="chat-header-left">
                 <div class="eyebrow">RAG KNOWLEDGE ASSISTANT</div>
-                <h2>知识库智能问答</h2>
+                <h2 data-i18n="知识库智能问答">知识库智能问答</h2>
               </div>
               <div class="chat-header-controls">
                 <div class="control-group">
-                  <label class="control-label" for="chatModelSelect">模型:</label>
-                  <select id="chatModelSelect" class="chat-select">
-                    <option value="qwen3.5-2b">LM Studio · qwen3.5-2b (本地推荐)</option>
-                    <option value="deepseek-chat">DeepSeek-V3 (云端极速)</option>
-                  </select>
+                  <label class="control-label" for="chatModelInput" data-i18n="模型:">模型:</label>
+                  <div class="chat-model-wrap">
+                    <input id="chatModelInput" class="chat-select" placeholder="正在读取可用模型…" autocomplete="off" spellcheck="false">
+                    <div id="chatModelDropdown" class="chat-model-dropdown" hidden></div>
+                  </div>
                 </div>
                 <div class="control-group">
-                  <label class="control-label" for="chatScopeSelect">检索范围:</label>
+                  <label class="control-label" for="chatScopeSelect" data-i18n="检索范围:">检索范围:</label>
                   <select id="chatScopeSelect" class="chat-select">
-                    <option value="">全知识库</option>
-                    <option value="notes">notes</option>
-                    <option value="Daily">Daily</option>
-                    <option value="resources">resources</option>
+                    <option value="" data-i18n="全知识库">全知识库</option>
                   </select>
                 </div>
-                <button class="btn btn-secondary chat-btn" id="btnClearChat" title="清空当前对话">🧹 清空记录</button>
+                <button class="btn btn-secondary chat-btn" id="btnClearChat" title="清空当前对话" data-i18n="🧹 清空记录">🧹 清空记录</button>
               </div>
             </div>
 
@@ -273,16 +241,16 @@
             <!-- Input Bar -->
             <div class="chat-input-wrapper">
               <div class="chat-suggestions-bar" id="chatSuggestionsBar">
-                <span class="sug-hint">推荐提问:</span>
-                <button class="sug-pill" data-prompt="总结最近一周的重点笔记">📋 周重点总结</button>
-                <button class="sug-pill" data-prompt="列出最近需要跟进的待办事项">✅ 待办跟进</button>
-                <button class="sug-pill" data-prompt="根据当前知识库整理一个主题索引">🧭 主题索引</button>
+                <span class="sug-hint" data-i18n="推荐提问:">推荐提问:</span>
+                <button class="sug-pill" data-prompt="总结最近一周的重点笔记"><span data-i18n="📋 周重点总结">📋 周重点总结</span></button>
+                <button class="sug-pill" data-prompt="列出最近需要跟进的待办事项"><span data-i18n="✅ 待办跟进">✅ 待办跟进</span></button>
+                <button class="sug-pill" data-prompt="根据当前知识库整理一个主题索引"><span data-i18n="🧭 主题索引">🧭 主题索引</span></button>
               </div>
               <form class="chat-input-form" id="chatInputForm">
-                <textarea id="chatInputText" class="chat-textarea" placeholder="输入你想咨询知识库的问题... (支持多轮连续追问，Enter 发送，Shift+Enter 换行)" rows="2"></textarea>
+                <textarea id="chatInputText" class="chat-textarea" placeholder="输入你想咨询知识库的问题... (支持多轮连续追问，Enter 发送，Shift+Enter 换行)" data-i18n-ph="输入你想咨询知识库的问题... (支持多轮连续追问，Enter 发送，Shift+Enter 换行)" rows="2"></textarea>
                 <button type="submit" class="chat-send-btn" id="btnSendChat" title="发送提问">
                   <span class="send-icon">➤</span>
-                  <span class="send-text">发送</span>
+                  <span class="send-text" data-i18n="发送">发送</span>
                 </button>
               </form>
             </div>
@@ -307,26 +275,19 @@
   <dialog id="taskModal" class="task-modal">
     <form method="dialog" id="taskModalForm" class="task-modal-form">
       <div class="modal-head">
-        <h3 id="taskModalTitle">编辑待办事项</h3>
+        <h3 id="taskModalTitle" data-i18n="编辑待办事项">编辑待办事项</h3>
         <button type="button" class="modal-close" id="closeTaskModal">×</button>
       </div>
       <div class="modal-body">
-        <label class="form-label">事项内容与标签</label>
-        <textarea id="taskModalInput" class="task-modal-textarea" rows="3" placeholder="事项内容..."></textarea>
-        <div class="modal-tag-chips">
-          <span class="modal-tag" data-tag="#work">+ #work</span>
-          <span class="modal-tag" data-tag="#learning">+ #learning</span>
-          <span class="modal-tag" data-tag="#reading">+ #reading</span>
-          <span class="modal-tag" data-tag="#personal">+ #personal</span>
-          <span class="modal-tag" data-tag="#study">+ #study</span>
-          <span class="modal-tag" data-tag="🔼">+ 🔼 优先</span>
-        </div>
+        <label class="form-label" data-i18n="事项内容与标签">事项内容与标签</label>
+        <textarea id="taskModalInput" class="task-modal-textarea" rows="3" placeholder="事项内容..." data-i18n-ph="事项内容..."></textarea>
+        <div class="modal-tag-chips" id="taskModalTagChips"></div>
       </div>
       <div class="modal-foot" style="display:flex;justify-content:space-between;align-items:center">
-        <button type="button" class="btn" id="deleteTaskFromModal" style="color:var(--danger);border-color:#fca5a5">🗑 删除此事项</button>
+        <button type="button" class="btn" id="deleteTaskFromModal" style="color:var(--danger);border-color:#fca5a5" data-i18n="🗑 删除此事项">🗑 删除此事项</button>
         <div style="display:flex;gap:8px">
-          <button type="button" class="btn btn-secondary" id="cancelTaskModal">取消</button>
-          <button type="submit" class="btn btn-primary" id="saveTaskModal">保存更改</button>
+          <button type="button" class="btn btn-secondary" id="cancelTaskModal" data-i18n="取消">取消</button>
+          <button type="submit" class="btn btn-primary" id="saveTaskModal" data-i18n="保存更改">保存更改</button>
         </div>
       </div>
     </form>
@@ -336,28 +297,45 @@
   <dialog id="noteModal" class="task-modal">
     <form method="dialog" id="noteModalForm" class="task-modal-form">
       <div class="modal-head">
-        <h3>＋ 新建笔记</h3>
+        <h3 data-i18n="＋ 新建笔记">＋ 新建笔记</h3>
         <button type="button" class="modal-close" id="closeNoteModal">×</button>
       </div>
       <div class="modal-body">
-        <label class="form-label">标题</label>
-        <input type="text" id="noteTitleInput" class="task-modal-input" placeholder="笔记标题" autocomplete="off">
-        <label class="form-label">存放位置</label>
+        <label class="form-label" data-i18n="标题">标题</label>
+        <input type="text" id="noteTitleInput" class="task-modal-input" placeholder="笔记标题" data-i18n-ph="笔记标题" autocomplete="off">
+        <label class="form-label" data-i18n="存放位置">存放位置</label>
         <select id="noteFolderSelect" class="chat-select note-folder-select">
-          <option value="notes">📝 notes</option>
-          <option value="work">💼 work</option>
-          <option value="learning">📖 learning</option>
-          <option value="reading">📚 reading</option>
-          <option value="personal">🎯 personal</option>
+          <option value="" data-i18n="正在读取 vault 目录…">正在读取 vault 目录…</option>
         </select>
-        <label class="form-label">正文（Markdown）</label>
-        <textarea id="noteBodyInput" class="task-modal-textarea" rows="10" placeholder="正文内容..."></textarea>
+        <label class="form-label" data-i18n="正文（Markdown）">正文（Markdown）</label>
+        <textarea id="noteBodyInput" class="task-modal-textarea" rows="10" placeholder="正文内容..." data-i18n-ph="正文内容..."></textarea>
       </div>
       <div class="modal-foot" style="display:flex;justify-content:flex-end;gap:8px">
-        <button type="button" class="btn btn-secondary" id="cancelNoteModal">取消</button>
-        <button type="submit" class="btn btn-primary" id="saveNoteModal">＋ 创建</button>
+        <button type="button" class="btn btn-secondary" id="cancelNoteModal" data-i18n="取消">取消</button>
+        <button type="submit" class="btn btn-primary" id="saveNoteModal" data-i18n="＋ 创建">＋ 创建</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Modal / Dialog for Directory Picker -->
+  <dialog id="dirPickerModal" class="task-modal">
+    <div class="task-modal-form">
+      <div class="modal-head">
+        <h3 data-i18n="📂 选择目录">📂 选择目录</h3>
+        <button type="button" class="modal-close" id="closeDirPicker">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="dir-picker-path" id="dirPickerPath"></div>
+        <div class="dir-picker-list" id="dirPickerList"></div>
+      </div>
+      <div class="modal-foot dir-picker-foot">
+        <button type="button" class="btn btn-secondary" id="dirPickerUp" data-i18n="⬆ 上级">⬆ 上级</button>
+        <button type="button" class="btn btn-secondary" id="dirPickerHome" data-i18n="🏠 主目录">🏠 主目录</button>
+        <span class="dir-picker-spacer"></span>
+        <button type="button" class="btn btn-secondary" id="dirPickerCancel" data-i18n="取消">取消</button>
+        <button type="button" class="btn btn-primary" id="dirPickerSelect" data-i18n="选择此目录">选择此目录</button>
+      </div>
+    </div>
   </dialog>
 
   <!-- Sidebar drawer backdrop (mobile only) -->
